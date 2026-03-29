@@ -44,7 +44,7 @@ SOLARIS is a comprehensive space weather detection, alert, and tracking system. 
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/solaris.git
+git clone https://github.com/JosephBaharloo/solaris.git
 cd solaris
 ```
 
