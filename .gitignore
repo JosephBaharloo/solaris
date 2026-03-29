@@ -1,0 +1,18 @@
+# Node.js
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.idea/
+.env
+
+# Model Weights
+*.safetensors
+Model/*.safetensors
+Model/tokenizer.json
+
+# macOS
+.DS_Store

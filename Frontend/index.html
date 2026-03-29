@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOLARIS — Solar Storm Detection & Alert System</title>
+  <meta name="description"
+    content="Real-time 3D solar storm detection, Earth impact visualization, and aviation alert management system." />
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>" />
+</head>
+
+<body>
+  <!-- Three.js Canvas -->
+  <canvas id="globe-canvas"></canvas>
+
+  <!-- Scan line overlay -->
+  <div class="scan-overlay"></div>
+  <div class="vignette"></div>
+
+  <!-- HUD decorative lines -->
+  <div class="hud-line-h top"></div>
+  <div class="hud-line-h bottom"></div>
+
+  <!-- HUD Corner brackets -->
+  <div class="hud-corners">
+    <div class="hud-corner tl"></div>
+    <div class="hud-corner tr"></div>
+    <div class="hud-corner bl"></div>
+    <div class="hud-corner br"></div>
+  </div>
+
+  <!-- ═══ MAIN HUD LAYOUT ═══ -->
+  <div id="hud">
+
+    <!-- ═══ TOP LEFT: System ID ═══ -->
+    <div class="top-left-bar">
+      <div>
+        <div class="system-title">SOLARIS</div>
+        <div class="system-subtitle">SOLAR STORM DETECTION & ALERT SYSTEM</div>
+      </div>
+    </div>
+
+    <!-- ═══ TOP CENTER: Mission Clock ═══ -->
+    <div class="top-bar">
+      <div>
+        <div class="mission-clock" id="mission-clock">00:00:00:00</div>
+        <div class="mission-clock-label">UTC MISSION TIME</div>
+      </div>
+    </div>
+
+    <!-- ═══ TOP RIGHT: Status ═══ -->
+    <div class="top-right-bar">
+      <button id="report-btn" class="report-button" title="Generate AI Situational Report">
+        <span class="report-btn-icon">⚡</span>
+        <span class="report-btn-text">GENERATE REPORT</span>
+      </button>
+      <div id="system-status" class="status-badge nominal">
+        <span class="panel-status"></span>
+        NOMINAL
+      </div>
+      <div class="system-id">S-01A</div>
+    </div>
+
+    <!-- ═══ LEFT COLUMN: Data Panels ═══ -->
+    <div class="left-column">
+
+      <!-- 1. Kp Index -->
+      <div class="panel" id="panel-kp">
+        <div class="panel-header">
+          <span class="panel-title">Kp Index</span>
+          <span class="panel-status"></span>
+        </div>
+        <div class="kp-gauge">
+          <div class="kp-value" id="kp-value" style="color: var(--green);">--</div>
+          <div class="kp-scale-label" id="kp-label" style="color: var(--green);">LOADING</div>
+        </div>
+        <div class="kp-bar-chart" id="kp-bars"></div>
+      </div>
+
+      <!-- 2. Solar Wind Speed -->
+      <div class="panel" id="panel-solar-wind-speed">
+        <div class="panel-header">
+          <span class="panel-title">Solar Wind Speed</span>
+          <span class="panel-status"></span>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:8px;">
+          <div class="data-value" id="sw-speed">--</div>
+          <div class="data-unit" style="font-size:12px;">km/s</div>
+        </div>
+        <div class="chart-container" id="chart-solar-wind">
+          <canvas id="canvas-solar-wind"></canvas>
+        </div>
+      </div>
+
+      <!-- 3. Solar Wind Density -->
+      <div class="panel" id="panel-solar-wind-density">
+        <div class="panel-header">
+          <span class="panel-title">Solar Wind Density</span>
+          <span class="panel-status"></span>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:8px;">
+          <div class="data-value" id="sw-density">--</div>
+          <div class="data-unit" style="font-size:12px;">p/cm³</div>
+        </div>
+        <div class="chart-container" id="chart-solar-density">
+          <canvas id="canvas-solar-density"></canvas>
+        </div>
+      </div>
+      <!-- 4. X-Ray Flux -->
+      <div class="panel" id="panel-xray">
+        <div class="panel-header">
+          <span class="panel-title">X-Ray Flux</span>
+          <span class="panel-status"></span>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:8px;">
+          <div class="data-value small" id="xray-value">--</div>
+          <div class="data-unit" style="font-size:12px;">W/m²</div>
+          <div class="status-badge nominal" id="xray-class-badge" style="margin-left:auto;">--</div>
+        </div>
+        <div class="chart-container" id="chart-xray">
+          <canvas id="canvas-xray"></canvas>
+        </div>
+      </div>
+
+      <!-- 5. Proton Flux -->
+      <div class="panel" id="panel-proton">
+        <div class="panel-header">
+          <span class="panel-title">Proton Flux</span>
+          <span class="panel-status"></span>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:8px;">
+          <div class="data-value small" id="proton-value">--</div>
+          <div class="data-unit" style="font-size:12px;">pfu</div>
+          <div class="status-badge nominal" id="proton-level-badge" style="margin-left:auto;">--</div>
+        </div>
+        <div class="chart-container" id="chart-proton">
+          <canvas id="canvas-proton"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══ CENTER: Globe space (empty — globe renders behind) ═══ -->
+    <div style="grid-area: center; pointer-events: none;"></div>
+
+    <!-- ═══ RIGHT COLUMN: Panels ═══ -->
+    <div class="right-column">
+
+      <!-- Storm Alerts (top) -->
+      <div class="panel" id="panel-alerts">
+        <div class="panel-header">
+          <span class="panel-title">Storm Alerts</span>
+          <span class="panel-status"></span>
+        </div>
+        <div class="alert-feed" id="alert-feed">
+          <div class="alert-item">
+            <span class="alert-time">--:--</span> Awaiting data...
+          </div>
+        </div>
+      </div>
+
+      <!-- Flight Monitor Panel -->
+      <div class="panel" id="panel-flights">
+        <div class="panel-header">
+          <span class="panel-title">Flight Monitor</span>
+          <span class="panel-status"></span>
+        </div>
+        <div class="flight-list" id="flight-list">
+          <div class="flight-item-empty">Loading flights...</div>
+        </div>
+      </div>
+
+      <!-- Satellite Monitor Panel -->
+      <div class="panel" id="panel-satellites">
+        <div class="panel-header">
+          <span class="panel-title">Satellite Monitor</span>
+          <span class="panel-status"></span>
+        </div>
+        <div class="satellite-list" id="satellite-list">
+          <div class="flight-item-empty">Loading satellites...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══ BOTTOM LEFT: Layer Filters ═══ -->
+    <div class="bottom-left-bar">
+      <div class="filter-panel" id="filter-panel">
+        <div class="section-label">LAYERS</div>
+        <div class="filter-controls">
+          <label class="filter-toggle" title="Toggle satellite markers">
+            <input type="checkbox" id="filter-satellites" checked />
+            <span class="filter-icon">🛰</span>
+            <span class="filter-label">SATELLITES</span>
+          </label>
+          <label class="filter-toggle" title="Toggle flight paths">
+            <input type="checkbox" id="filter-flights" checked />
+            <span class="filter-icon">✈</span>
+            <span class="filter-label">FLIGHTS</span>
+          </label>
+          <label class="filter-toggle" title="Toggle city markers">
+            <input type="checkbox" id="filter-markers" checked />
+            <span class="filter-icon">📍</span>
+            <span class="filter-label">MARKERS</span>
+          </label>
+          <label class="filter-toggle" title="Toggle grid lines">
+            <input type="checkbox" id="filter-grid" checked />
+            <span class="filter-icon">🔲</span>
+            <span class="filter-label">GRID</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ BOTTOM CENTER: empty ═══ -->
+    <div class="bottom-bar"></div>
+
+    <!-- ═══ BOTTOM RIGHT: Manual Override ═══ -->
+    <div class="bottom-right-bar">
+      <div id="manual-override-panel" class="manual-override-panel">
+        <button id="manual-override-toggle" class="override-toggle-btn"
+          title="Manual Override — Simulate extreme events">
+          <span class="override-icon">⚠</span>
+          <span class="override-label">MANUAL OVERRIDE</span>
+        </button>
+        <div id="manual-override-form" class="override-form hidden">
+          <div class="override-presets">
+            <button class="override-preset-btn" data-preset="nominal">NOMINAL</button>
+            <button class="override-preset-btn" data-preset="moderate">G1 MODERATE</button>
+            <button class="override-preset-btn" data-preset="severe">G3 SEVERE</button>
+            <button class="override-preset-btn" data-preset="extreme">G5 EXTREME</button>
+          </div>
+          <div class="override-inputs">
+            <div class="override-input-row">
+              <label>Kp</label>
+              <input type="number" id="ov-kp" min="0" max="9" step="0.1" value="2" />
+            </div>
+            <div class="override-input-row">
+              <label>Speed (km/s)</label>
+              <input type="number" id="ov-speed" min="0" max="2000" step="10" value="350" />
+            </div>
+            <div class="override-input-row">
+              <label>Density (p/cm³)</label>
+              <input type="number" id="ov-density" min="0" max="200" step="1" value="4" />
+            </div>
+            <div class="override-input-row">
+              <label>X-Ray (W/m²)</label>
+              <input type="number" id="ov-xray" min="0" max="1" step="0.0000001" value="0.0000001" />
+            </div>
+            <div class="override-input-row">
+              <label>Proton (pfu)</label>
+              <input type="number" id="ov-proton" min="0" max="10000" step="1" value="0.5" />
+            </div>
+          </div>
+          <div class="override-actions">
+            <button id="override-inject-btn" class="override-action-btn inject">⚡ INJECT VALUES</button>
+            <button id="override-reset-btn" class="override-action-btn reset">↻ RESET TO LIVE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ REPORT MODAL ═══ -->
+  <div id="report-modal" class="report-modal hidden">
+    <div class="report-modal-backdrop"></div>
+    <div class="report-modal-container">
+      <div class="report-modal-panel">
+        <div class="report-modal-header">
+          <div class="report-modal-title-area">
+            <span class="report-modal-icon">⚡</span>
+            <div>
+              <div class="report-modal-title">SOLARIS INTELLIGENCE REPORT</div>
+              <div class="report-modal-subtitle">AI-GENERATED SITUATIONAL ANALYSIS</div>
+            </div>
+          </div>
+          <button id="report-close-btn" class="report-close-btn" title="Close Report">
+            <span>✕</span>
+          </button>
+        </div>
+        <div class="report-modal-body" id="report-body">
+          <div class="report-loading" id="report-loading">
+            <div class="report-spinner"></div>
+            <div class="report-loading-text">ANALYZING TELEMETRY DATA...</div>
+            <div class="report-loading-sub">Qwen3 LLM processing on CUDA</div>
+          </div>
+          <div class="report-content" id="report-content"></div>
+        </div>
+        <div class="report-modal-footer" id="report-footer" style="display:none;">
+          <span id="report-stats"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
